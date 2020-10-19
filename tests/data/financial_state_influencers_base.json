@@ -1,4 +1,10 @@
 {
+  "max_retirement_age": 70,
+  "date_of_birth": "1990-02-01",
+  "spending_goals": [],
+  "current_savings": {},
+  "current_assets": [],
+  "current_liabilities": [],
   "once_off_expenses": [
     {
       "name": "once_off",
@@ -25,7 +31,7 @@
       "end_date": "2014-07-08T09:10:11Z"
     }
   ],
-  "once_off_incomes": [
+  "once_off_income": [
     {
       "name": "once_off",
       "value": 800,
@@ -37,7 +43,7 @@
       "date": "2014-03-08T09:10:11Z"
     }
   ],
-  "monthly_incomes": [
+  "monthly_income": [
     {
       "name": "Wilhelm-income",
       "value": 2000,

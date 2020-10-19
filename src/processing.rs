@@ -1,123 +1,211 @@
 use super::data;
 use super::models;
+use super::models::{FinancialForecast, FinancialStateChanges};
 use chrono::{DateTime, Datelike, Duration, TimeZone, Utc};
+use models::{FinancialStateInfluencer, ProcessedSpendingGoal};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-#[derive(Debug, PartialEq, PartialOrd)]
-pub struct PeriodicFinancialData {
-    pub monthly_expenses: Vec<f64>,
-    pub monthly_income: Vec<f64>,
-    pub monthly_asset_delta: Vec<f64>,
-    pub monthly_liability_delta: Vec<f64>,
+fn bisect_vectors_from_undesirable_income(
+    undesirable_income: &Vec<FinancialStateChanges>,
+    bisection_point: i16,
+) -> Vec<FinancialStateChanges> {
+    return vec![];
 }
 
-impl PeriodicFinancialData {
-    pub fn empty() -> Self {
-        return PeriodicFinancialData {
-            monthly_expenses: vec![],
-            monthly_income: vec![],
-            monthly_asset_delta: vec![],
-            monthly_liability_delta: vec![],
-        };
+fn cum_sum(vec: &Vec<f64>) -> Vec<f64> {
+    let mut res: Vec<f64> = vec![];
+    let mut cum_sum: f64 = 0.0;
+    for val in vec {
+        cum_sum += val;
+        res.push(cum_sum)
+    }
+    return res;
+}
+
+fn add(vec1: &Vec<f64>, vec2: &Vec<f64>) -> Vec<f64> {
+    let mut res: Vec<f64> = vec![];
+    for i in 0..vec1.len() {
+        res.push(vec1[i] + vec2[i]);
+    }
+    return res;
+}
+
+fn minus(vec1: &Vec<f64>, vec2: &Vec<f64>) -> Vec<f64> {
+    let mut res: Vec<f64> = vec![];
+    for i in 0..vec1.len() {
+        res.push(vec1[i] - vec2[i]);
+    }
+    return res;
+}
+
+fn are_balances_valid(balances: &Vec<f64>) -> bool {
+    return true;
+}
+
+struct BisectionPoints {
+    start: i16,
+    end: i16,
+}
+
+impl BisectionPoints {
+    fn middle(self: &Self) -> i16 {
+        self.start + ((self.end - self.start) / 2)
     }
 
-    pub fn filled(value: f64, size: usize) -> Self {
-        return PeriodicFinancialData {
-            monthly_expenses: vec![value; size],
-            monthly_income: vec![value; size],
-            monthly_asset_delta: vec![value; size],
-            monthly_liability_delta: vec![value; size],
-        };
+    fn new_bisection_point(
+        self: &Self,
+        fin_state_influencers: &models::FinancialStateInfluencers,
+        bisect_left: bool,
+    ) -> Option<Self> {
+        let middle = self.middle();
+        if middle == self.start {
+            return None;
+        }
+        if bisect_left {
+            return Some(BisectionPoints {
+                start: self.start,
+                end: middle - 1,
+            });
+        } else {
+            return Some(BisectionPoints {
+                start: self.start,
+                end: middle - 1,
+            });
+        }
     }
 
-    fn from_financial_state_influencers(
-        financial_state_influencers: FinancialStateInfluencers,
-    ) -> PeriodicFinancialData {
-        return PeriodicFinancialData::empty();
-    }
-
-    pub fn monthly_closing_balance(&self) -> Vec<f64> {
-        return vec![];
+    fn initial_point(fin_state_influencers: &models::FinancialStateInfluencers) -> Self {
+        Self { start: 0, end: 10 }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, PartialOrd)]
-pub struct FinancialStateInfluencers {
-    pub once_off_expenses: Vec<models::OnceOffExpense>,
-    pub monthly_expenses: Vec<models::MonthlyExpense>,
-    pub once_off_incomes: Vec<models::OnceOffIncome>,
-    pub monthly_incomes: Vec<models::MonthlyIncome>,
-    pub investments: Vec<models::Investment>,
+pub enum ProcessFinancialStateInfluencersErrors {
+    MonthlySpendingExceedsIncome,
+    UnableToProduceFinancialForecast,
 }
 
-impl FinancialStateInfluencers {
-    pub fn final_relavent_date(&self) -> DateTime<Utc> {
-        let mut final_date = Utc.ymd(0, 1, 1).and_hms(0, 0, 0);
-        for once_off_expense in &self.once_off_expenses {
-            if once_off_expense.date > final_date {
-                final_date = once_off_expense.date.clone();
-            }
-        }
-        for monthly_expense in &self.monthly_expenses {
-            if monthly_expense.end_date > final_date {
-                final_date = monthly_expense.end_date.clone();
-            }
-        }
-        for once_off_income in &self.once_off_incomes {
-            if once_off_income.date > final_date {
-                final_date = once_off_income.date.clone();
-            }
-        }
-        for monthly_income in &self.monthly_incomes {
-            if monthly_income.end_date > final_date {
-                final_date = monthly_income.end_date.clone();
-            }
-        }
-        return final_date;
-    }
-}
+pub fn process_financial_state_influencers(
+    fin_state_influencers: models::FinancialStateInfluencers,
+) -> Result<models::FinancialForecast, ProcessFinancialStateInfluencersErrors> {
+    let mut spending_goals: Vec<models::ProcessedSpendingGoal> = Vec::new();
+    let fixed_financial_state_chagnes =
+        fin_state_influencers.financial_state_changes_from_fixed_sources();
+    let prioritised_optional_spending_goals =
+        fin_state_influencers.prioritised_optional_spending_goals();
+    let income_from_undesirable_sources = fin_state_influencers.income_from_undesirable_sources();
 
-pub fn generate_future_finacial_status(
-    financial_state_influencers: FinancialStateInfluencers,
-    starting_date: DateTime<Utc>,
-) -> PeriodicFinancialData {
-    let end_date = financial_state_influencers.final_relavent_date();
-    // Calculate number of months between starting date and final date
-    let vector_length = (end_date.year() - starting_date.year()) * 12 + end_date.month() as i32
-        - starting_date.month() as i32
-        + 1; // Add one because if the end date and start date are the same we still want to count that month
-    println!("{}", vector_length);
-    println!("{}", starting_date);
-    println!("{}", end_date);
-    let mut fin_data = PeriodicFinancialData::filled(0.0, vector_length as usize);
-    for month in (0..vector_length) {
-        let ref_date = Utc.ymd(
-            starting_date.year() + (month / 12) as i32,
-            starting_date.month() + (month % 12) as u32,
-            starting_date.day(),
+    let mut last_successful_forecast: Option<FinancialForecast> = None;
+
+    let mut bisection = BisectionPoints::initial_point(&fin_state_influencers);
+    let mut final_merged_fin_state_changes: FinancialStateChanges = FinancialStateChanges::new();
+
+    loop {
+        // ****
+        // **** STEP 1: Set up the params for an iteration
+        // ****
+
+        // Create base fin state changes without spending goals
+        let current_income_from_undesirable_sources = bisect_vectors_from_undesirable_income(
+            &income_from_undesirable_sources,
+            bisection.middle(),
         );
-        for monthly_expense in &financial_state_influencers.monthly_expenses {
-            fin_data.monthly_expenses[month as usize] +=
-                monthly_expense.monthly_value_for_date(ref_date);
+        // let base_fin_state_changes =
+
+        // This cashflow holds the current cashflow vector as we loop through the spending goals and subtract
+        // the their `FinancialStateChanges` from the cashflow
+        let mut cash_balance = cum_sum(&final_merged_fin_state_changes.cashflow);
+
+        // If the cash_balance is not valid (i.e has parts of overdraft) then we exist the loop
+        if !are_balances_valid(&cash_balance) {
+            return Err(ProcessFinancialStateInfluencersErrors::MonthlySpendingExceedsIncome);
         }
-        for once_off_income in &financial_state_influencers.once_off_incomes {
-            fin_data.monthly_income[month as usize] +=
-                once_off_income.monthly_value_for_date(ref_date);
+
+        // ****
+        // **** STEP 2: Process Spending goals ****
+        // ****
+
+        // Here we process the spending goals by looping throught the spending goals and applying them to the current_cashflow.
+        let mut all_spending_goals_achievable: bool = true;
+        for fin_state_influencer in &prioritised_optional_spending_goals {
+            let fin_state_changes = fin_state_influencer.generate_financial_state_changes();
+
+            // Temp holder of the merged cash balance vector. Will set the base vector once
+            // we check that this spending goal does not cause and overdraft
+            let _cash_balance = add(&cash_balance, &cum_sum(&fin_state_changes.cashflow));
+            let processed_spending_goal =
+                ProcessedSpendingGoal::from_spending_goal(fin_state_influencer, &_cash_balance);
+
+            spending_goals.push(processed_spending_goal);
+
+            // If the spending goal doesn't cause an overdraft then update the cash balance vector and merge the `FinancialStateChanges`
+            // from the spending goal (that may contain updates to assets and liabilities) with the floating fin_state_changes tracker
+            if processed_spending_goal.is_achieveable {
+                cash_balance = _cash_balance;
+                final_merged_fin_state_changes.merge(&fin_state_changes);
+            } else {
+                all_spending_goals_achievable = false;
+            }
         }
-        for monthly_income in &financial_state_influencers.monthly_incomes {
-            fin_data.monthly_income[month as usize] +=
-                monthly_income.monthly_value_for_date(ref_date);
+
+        // ****
+        // **** STEP 3: Optimise independence age ****
+        // ****
+
+        let financial_forecast = FinancialForecast {
+            all_spending_goals_achievable: all_spending_goals_achievable,
+            spending_goals: spending_goals.to_vec(),
+            financial_independence_age: fin_state_influencers
+                .age_at_bisection_point(bisection.middle()),
+            monthly_cashflow_deltas: final_merged_fin_state_changes.cashflow.to_vec(),
+            monthly_networth: minus(
+                &cum_sum(&final_merged_fin_state_changes.assets_delta),
+                &cum_sum(&final_merged_fin_state_changes.liabilities_delta),
+            ),
+        };
+
+        // If we failed to achieve all the spending goals after the first attempt there is no point trying
+        // to bisect
+        if !all_spending_goals_achievable
+            && bisection.middle() == models::FinancialStateInfluencers::VECTOR_LENGTH()
+        {
+            break;
         }
-        for once_off_expense in &financial_state_influencers.once_off_expenses {
-            fin_data.monthly_expenses[month as usize] +=
-                once_off_expense.monthly_value_for_date(ref_date);
+
+        // store the current bisection point
+        let _bisection_point = bisection.middle();
+        last_successful_forecast = match last_successful_forecast {
+            None => Some(financial_forecast),
+            Some(forecast) => {
+                if forecast.was_improved_by(&financial_forecast) {
+                    // Todo: new_bisection_point should raise error when it can no longer bisect
+                    bisection = match bisection.new_bisection_point(&fin_state_influencers, true) {
+                        Some(bisection) => bisection,
+                        None => {
+                            last_successful_forecast = Some(forecast);
+                            break;
+                        }
+                    };
+                    Some(financial_forecast)
+                } else {
+                    // Todo: new_bisection_point should raise error when it can no longer bisect
+                    bisection = match bisection.new_bisection_point(&fin_state_influencers, false) {
+                        Some(bisection) => bisection,
+                        None => {
+                            last_successful_forecast = Some(forecast);
+                            break;
+                        }
+                    };
+                    Some(forecast)
+                }
+            }
         }
     }
-    return fin_data;
-}
 
-#[cfg(test)]
-mod tests {
-    fn test_creating_periodid_financial_data_from_influencers() {}
+    match last_successful_forecast {
+        None => Err(ProcessFinancialStateInfluencersErrors::UnableToProduceFinancialForecast),
+        Some(forecast) => {
+            return Ok(forecast);
+        }
+    }
 }
