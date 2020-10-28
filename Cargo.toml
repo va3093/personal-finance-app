@@ -5,8 +5,18 @@ authors = ["Wilhelm <va3093@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name="personal-finance"
+path = "src/bin.rs"
 
 [dependencies]
 serde_json = "1.0.57"
 serde = { version = "^1.0", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
+plotly = "0.6.0"
+rocket = "0.4.5"
+rocket_cors = "0.5.1"
+rocket_contrib = "0.4.5"

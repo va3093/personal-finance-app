@@ -9,52 +9,54 @@
     {
       "name": "once_off",
       "value": 1000,
-      "date": "2014-04-08T09:10:11Z"
+      "date": "2014-04-08"
     },
     {
       "name": "once_off",
       "value": 1000,
-      "date": "2014-02-08T09:10:11Z"
+      "date": "2014-02-08"
     }
   ],
   "monthly_expenses": [
     {
       "name": "groceries",
-      "value": 600,
-      "start_date": "2014-01-08T09:10:11Z",
-      "end_date": "2014-06-08T09:10:11Z"
+      "amount": 600,
+      "start_date": "2014-01-08",
+      "end_date": "2014-06-08"
     },
     {
       "name": "bills",
-      "value": 400,
-      "start_date": "2014-01-08T09:10:11Z",
-      "end_date": "2014-07-08T09:10:11Z"
+      "amount": 400,
+      "start_date": "2014-01-08",
+      "end_date": "2014-07-08"
     }
   ],
   "once_off_income": [
     {
       "name": "once_off",
-      "value": 800,
-      "date": "2014-02-08T09:10:11Z"
+      "amount": 800,
+      "date": "2014-02-08"
     },
     {
       "name": "once_off",
-      "value": 500,
-      "date": "2014-03-08T09:10:11Z"
+      "amount": 500,
+      "date": "2014-03-08"
     }
   ],
   "monthly_income": [
     {
+      "undesireable_source": false,
       "name": "Wilhelm-income",
-      "value": 2000,
-      "start_date": "2014-01-08T09:10:11Z",
-      "end_date": "2014-12-08T09:10:11Z"
+      "amount": 2000,
+      "start_date": "2014-01-08",
+      "end_date": "2014-12-08"
     },
     {
+      "undesireable_source": false,
       "name": "Aisling-income",
-      "value": 800,
-      "start_date": "2014-01-08T09:10:11Z",
-      "end_date": "2014-11-08T09:10:11Z"
+      "amount": 800,
+      "start_date": "2014-01-08",
+      "end_date": "2014-11-08"
     }
   ],
   "investments": []
